@@ -1,15 +1,50 @@
 <?php
+
 namespace App\Entity;
 
+use App\Repository\ScoreRepository;
+use Doctrine\ORM\Mapping as ORM;
+
+#[ORM\Entity(repositoryClass: ScoreRepository::class)]
+#[ORM\Table(name: 'scores')]
 class Score
 {
-    public ?int $id = null;
-    public int $userId;
-    public int $score;
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: 'integer')]
+    private ?int $id = null;
 
-    public function __construct(int $userId, int $score)
+    #[ORM\Column(type: 'integer')]
+    private int $value;
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    private User $user;
+
+    public function getId(): ?int
     {
-        $this->userId = $userId;
-        $this->score = $score;
+        return $this->id;
+    }
+
+    public function getValue(): int
+    {
+        return $this->value;
+    }
+
+    public function setValue(int $value): self
+    {
+        $this->value = $value;
+        return $this;
+    }
+
+    public function getUser(): User
+    {
+        return $this->user;
+    }
+
+    public function setUser(User $user): self
+    {
+        $this->user = $user;
+        return $this;
     }
 }
