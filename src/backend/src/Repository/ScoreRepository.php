@@ -3,6 +3,7 @@ namespace App\Repository;
 
 use App\Entity\Score;
 use App\Entity\User;
+use App\Utils\TypeCast;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -21,13 +22,15 @@ class ScoreRepository extends ServiceEntityRepository
      */
     public function getTop5(): array
     {
-        return $this->createQueryBuilder('s')
+        $results = $this->createQueryBuilder('s')
             ->join('s.user', 'u')
             ->addSelect('u')
             ->orderBy('s.value', 'DESC')
             ->setMaxResults(5)
             ->getQuery()
             ->getResult();
+
+        return TypeCast::toArray($results); // PHPStan nyní ví, že je to array
     }
 
     /**
