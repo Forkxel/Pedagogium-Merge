@@ -18,8 +18,9 @@ class ScoreController
         /** @var array<string, mixed> $data */
         $data = json_decode($request->getContent(), true) ?? [];
 
-        $username = cast($data['username'] ?? null, 'string', '');
-        $score = cast($data['score'] ?? null, 'int', 0);
+        // pevně typované hodnoty
+        $username = (string) ($data['username'] ?? '');
+        $score = (int) ($data['score'] ?? 0);
 
         if ($username === '' || $score <= 0) {
             return new JsonResponse(['error' => 'Invalid input'], 400);

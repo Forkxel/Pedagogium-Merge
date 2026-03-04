@@ -5,7 +5,6 @@ use App\Service\UserService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
-use function App\Utils\cast;
 
 #[Route('/user')]
 class UserController
@@ -18,8 +17,8 @@ class UserController
         /** @var array<string, mixed> $data */
         $data = json_decode($request->getContent(), true) ?? [];
 
-        $username = cast($data['username'] ?? null, 'string', '');
-        $password = cast($data['password'] ?? null, 'string', '');
+        $username = (string) ($data['username'] ?? '');
+        $password = (string) ($data['password'] ?? '');
 
         if ($username === '' || $password === '') {
             return new JsonResponse(['error' => 'Invalid input'], 400);

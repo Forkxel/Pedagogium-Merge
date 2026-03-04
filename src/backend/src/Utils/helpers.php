@@ -2,17 +2,17 @@
 namespace App\Utils;
 
 /**
- * Bezpečně převádí mixed na string nebo int s fallbackem
+ * Převod na pevný typ
  *
  * @param mixed $value
  * @param 'string'|'int' $type
- * @param string|int|null $default
+ * @param string|int $default
  * @return string|int
  */
-function cast(mixed $value, string $type, mixed $default = null): string|int
+function cast(mixed $value, string $type, mixed $default): string|int
 {
     return match($type) {
-        'string' => is_scalar($value) ? (string) $value : (string) $default,
-        'int' => is_numeric($value) ? (int) $value : (int) $default,
+        'string' => (string) $value,
+        'int' => (int) $value,
     };
 }
