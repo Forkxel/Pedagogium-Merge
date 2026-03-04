@@ -2,33 +2,39 @@
 namespace App\Controller;
 
 use App\Service\ScoreService;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/score')]
-class ScoreController extends AbstractController
+class ScoreController
 {
-    public function __construct(private ScoreService $service) {}
+    public function __construct(private ScoreService $scoreService) {}
 
-    #[Route('', name: 'score_save', methods: ['POST'])]
-    public function save(Request $request): JsonResponse
+    #[Route('/submit', name: 'score_submit', methods: ['POST'])]
+    public function submit(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
-        if (!is_array($data) || !isset($data['username'], $data['score'])) {
-            return new JsonResponse(['error' => 'Missing data'], 400);
+        $username = isset($data['username']) ? (string)$data['username'] : '';
+        $score = isset($data['score']) ? (int)$data['score'] : 0;
+
+        if ($username === '' || $score <= 0) {
+            return new JsonResponse(['error' => 'Invalid input'], 400);
         }
 
-        $username = (string) $data['username'];
-        $score = (int) $data['score'];
-
-        return new JsonResponse($this->service->saveHighscore($username, $score));
+        $result = $this->scoreService->saveHighscore($username, $score);
+        return new JsonResponse($result);
     }
 
     #[Route('/top5', name: 'score_top5', methods: ['GET'])]
     public function top5(): JsonResponse
     {
-        return new JsonResponse($this->service->getTop5());
+        $scores = $this->scoreService->getTop5();
+        $output = array_map(fn($s) => [
+            'username' => $s->getUser()->getUsername(),
+            'score' => $s->getValue(),
+        ], $scores);
+
+        return new JsonResponse($output);
     }
 }
