@@ -11,23 +11,25 @@ use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
 
 class Kernel extends BaseKernel
 {
-    use MicroKernelTrait;  
+    use MicroKernelTrait;
 
     public function registerBundles(): iterable
     {
-        $bundles = [
-            new FrameworkBundle(), 
-            new ArtprimaPrometheusMetricsBundle(),   
-        ];
+        /**
+         * @var array<class-string<\Symfony\Component\HttpKernel\Bundle\BundleInterface>, array<string, bool>> $contents
+         */
+        $contents = require $this->getProjectDir().'/config/bundles.php';
 
-        foreach ($bundles as $bundle) { 
-            yield $bundle;  
-        } 
+        foreach ($contents as $class => $envs) {
+            if (($envs[$this->environment] ?? $envs['all'] ?? false)) {
+                yield new $class();
+            }
+        }
     }
 
     protected function configureContainer(ContainerConfigurator $container): void
     {
-        $container->import('../config/{packages}/*.yaml');   
+        $container->import('../config/{packages}/*.yaml');
         $container->import('../config/services.yaml');
     }
 
