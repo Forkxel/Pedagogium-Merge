@@ -5,6 +5,7 @@ use App\Service\ScoreService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
+use App\Utils\TypeCast;
 
 #[Route('/score')]
 class ScoreController
@@ -17,9 +18,8 @@ class ScoreController
         /** @var array<string, mixed> $data */
         $data = json_decode($request->getContent(), true) ?? [];
 
-
-        $username = (string) ($data['username'] ?? '');
-        $score = (int) ($data['score'] ?? 0);
+        $username = TypeCast::toString($data['username'] ?? '');
+        $score    = TypeCast::toInt($data['score'] ?? 0);
 
         if ($username === '' || $score <= 0) {
             return new JsonResponse(['error' => 'Invalid input'], 400);

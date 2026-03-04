@@ -6,6 +6,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
+use App\Utils\TypeCast;
 
 #[Route('/utm')]
 class UtmApiController
@@ -18,9 +19,9 @@ class UtmApiController
         /** @var array<string, mixed> $data */
         $data = json_decode($request->getContent(), true) ?? [];
 
-        $source = (string) ($data['utm_source'] ?? '');
-        $medium = (string) ($data['utm_medium'] ?? '');
-        $campaign = (string) ($data['utm_campaign'] ?? '');
+        $source   = TypeCast::toString($data['utm_source'] ?? '');
+        $medium   = TypeCast::toString($data['utm_medium'] ?? '');
+        $campaign = TypeCast::toString($data['utm_campaign'] ?? '');
 
         if ($source === '' || $medium === '' || $campaign === '') {
             return new JsonResponse(['error' => 'Invalid UTM parameters'], 400);
