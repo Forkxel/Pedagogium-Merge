@@ -24,7 +24,7 @@ class UtmVisit
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
-    public function __construct(string $utmSource, string $utmMedium, string $utmCampaign)
+    public function __construct(string $utmSource = '', string $utmMedium = '', string $utmCampaign = '')
     {
         $this->utmSource = $utmSource;
         $this->utmMedium = $utmMedium;
@@ -42,9 +42,21 @@ class UtmVisit
         return $this->utmSource;
     }
 
+    public function setUtmSource(string $utmSource): self
+    {
+        $this->utmSource = $utmSource;
+        return $this;
+    }
+
     public function getUtmMedium(): string
     {
         return $this->utmMedium;
+    }
+
+    public function setUtmMedium(string $utmMedium): self
+    {
+        $this->utmMedium = $utmMedium;
+        return $this;
     }
 
     public function getUtmCampaign(): string
@@ -52,8 +64,20 @@ class UtmVisit
         return $this->utmCampaign;
     }
 
+    public function setUtmCampaign(string $utmCampaign): self
+    {
+        $this->utmCampaign = $utmCampaign;
+        return $this;
+    }
+
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function setCreatedAt(\DateTimeImmutable $createdAt): self
+    {
+        $this->createdAt = $createdAt;
+        return $this;
     }
 }

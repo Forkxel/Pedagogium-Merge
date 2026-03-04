@@ -14,9 +14,11 @@ class UserController
     #[Route('/register', name: 'user_register', methods: ['POST'])]
     public function register(Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
-        $username = isset($data['username']) ? (string)$data['username'] : '';
-        $password = isset($data['password']) ? (string)$data['password'] : '';
+        /** @var array<string, mixed> $data */
+        $data = json_decode($request->getContent(), true) ?? [];
+
+        $username = (string) ($data['username'] ?? '');
+        $password = (string) ($data['password'] ?? '');
 
         if ($username === '' || $password === '') {
             return new JsonResponse(['error' => 'Invalid input'], 400);
