@@ -15,24 +15,25 @@ class UserService
         $this->passwordService = $passwordService;
     }
 
+    /** @return array<string,string> */
     public function register(string $username, string $password): array
     {
-        if ($this->repo->findByUsername($username)) {
-            return ['error'=>'User exists'];
+        if ($this->repo->findOneBy(['username' => $username])) {
+            return ['error' => 'User exists'];
         }
 
         $encrypted = $this->passwordService->encrypt($password);
         $user = new User($username, $encrypted);
-        $this->repo->save($user);
+        $this->repo->getEntityManager()->persist($user);
+        $this->repo->getEntityManager()->flush();
 
-        return ['status'=>'ok'];
+        return ['status' => 'ok'];
     }
 
     public function getPassword(string $username): ?string
     {
-        $user = $this->repo->findByUsername($username);
+        $user = $this->repo->findOneBy(['username' => $username]);
         if (!$user) return null;
-
         return $this->passwordService->decrypt($user->getPassword());
     }
 }

@@ -16,27 +16,30 @@ class ScoreService
         $this->userRepo = $userRepo;
     }
 
+    /** @return array<string,string> */
     public function saveHighscore(string $username, int $score): array
     {
-        $user = $this->userRepo->findByUsername($username);
-        if (!$user) return ['error'=>'User not found'];
+        $user = $this->userRepo->findOneBy(['username' => $username]);
+        if (!$user) return ['error' => 'User not found'];
 
-        $existingScore = $this->scoreRepo->findByUserId($user->getId());
+        $existingScore = $this->scoreRepo->findOneBy(['user' => $user]);
         if ($existingScore) {
             if ($score > $existingScore->getValue()) {
                 $existingScore->setValue($score);
-                $this->scoreRepo->save($existingScore);
+                $this->scoreRepo->getEntityManager()->flush();
             }
         } else {
-            $this->scoreRepo->save(new Score($user, $score));
+            $newScore = new Score($user, $score);
+            $this->scoreRepo->getEntityManager()->persist($newScore);
+            $this->scoreRepo->getEntityManager()->flush();
         }
 
-        return ['status'=>'saved'];
+        return ['status' => 'saved'];
     }
 
     /** @return Score[] */
     public function getTop5(): array
     {
-        return $this->scoreRepo->getTop5();
+        return $this->scoreRepo->findBy([], ['value' => 'DESC'], 5);
     }
 }

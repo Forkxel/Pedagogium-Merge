@@ -2,40 +2,34 @@
 namespace App\Controller;
 
 use App\Entity\UtmVisit;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
+use App\Repository\UtmVisitRepository;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/utm')]
-class UtmApiController
+class UtmApiController extends AbstractController
 {
-    public function __construct(private EntityManagerInterface $em) {}
+    public function __construct(private UtmVisitRepository $repo) {}
 
     #[Route('/track', name: 'utm', methods: ['POST'])]
     public function track(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
 
-        if (!is_array($data)) return new JsonResponse(['error'=>'Invalid JSON'],400);
+        $source = isset($data['utm_source']) ? (string)$data['utm_source'] : '';
+        $medium = isset($data['utm_medium']) ? (string)$data['utm_medium'] : '';
+        $campaign = isset($data['utm_campaign']) ? (string)$data['utm_campaign'] : '';
 
-        $source = $data['utm_source'] ?? null;
-        $medium = $data['utm_medium'] ?? null;
-        $campaign = $data['utm_campaign'] ?? null;
-
-        if (!is_string($source) || !is_string($medium) || !is_string($campaign)) {
-            return new JsonResponse(['error'=>'Invalid UTM parameters'],400);
+        if (!$source || !$medium || !$campaign) {
+            return new JsonResponse(['error' => 'Missing UTM parameters'], 400);
         }
 
-        $visit = new UtmVisit();
-        $visit->setUtmSource($source)
-              ->setUtmMedium($medium)
-              ->setUtmCampaign($campaign)
-              ->setCreatedAt(new \DateTimeImmutable());
+        $visit = new UtmVisit($source, $medium, $campaign);
+        $this->repo->getEntityManager()->persist($visit);
+        $this->repo->getEntityManager()->flush();
 
-        $this->em->persist($visit);
-        $this->em->flush();
-
-        return new JsonResponse(['status'=>'ok']);
+        return new JsonResponse(['status' => 'ok']);
     }
 }
