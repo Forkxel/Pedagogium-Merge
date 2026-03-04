@@ -1,14 +1,29 @@
 <?php
 namespace App\Utils;
 
-public static function toString(mixed $value): string
+class TypeCast
 {
-    /** @phpstan-ignore-next-line */
-    return (string) $value;
-}
+    public static function toString(mixed $value): string
+    {
+        if (is_scalar($value) || $value === null) {
+            return (string) $value;
+        }
 
-public static function toInt(mixed $value): int
-{
-    /** @phpstan-ignore-next-line */
-    return (int) $value;
+        // fallback pro objekty s __toString()
+        if (is_object($value) && method_exists($value, '__toString')) {
+            return (string) $value;
+        }
+
+        // pro pole a jiné typy vrátíme prázdný string
+        return '';
+    }
+
+    public static function toInt(mixed $value): int
+    {
+        if (is_scalar($value)) {
+            return (int) $value;
+        }
+
+        return 0;
+    }
 }
