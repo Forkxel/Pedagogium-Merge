@@ -5,7 +5,6 @@ use App\Service\ScoreService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
-use function App\Utils\cast;
 
 #[Route('/score')]
 class ScoreController
