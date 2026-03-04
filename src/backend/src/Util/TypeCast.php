@@ -3,13 +3,6 @@ namespace App\Utils;
 
 class TypeCast
 {
-    /**
-     * Přetypuje cokoliv na string.
-     * Pokud je to pole nebo objekt bez __toString(), vrátí prázdný string.
-     *
-     * @param mixed $value
-     * @return string
-     */
     public static function toString(mixed $value): string
     {
         if (is_scalar($value) || $value === null) {
@@ -21,20 +14,12 @@ class TypeCast
         }
 
         if (is_array($value)) {
-            // Můžeme vrátit JSON reprezentaci pole
             return json_encode($value, JSON_THROW_ON_ERROR);
         }
 
         return '';
     }
 
-    /**
-     * Přetypuje cokoliv na int.
-     * Pokud je to pole nebo objekt, vrátí 0.
-     *
-     * @param mixed $value
-     * @return int
-     */
     public static function toInt(mixed $value): int
     {
         if (is_scalar($value)) {
@@ -46,12 +31,10 @@ class TypeCast
 
     /**
      * Přetypuje cokoliv na array.
-     * Pokud je to objekt implementující Traversable, převede na array.
-     * Pokud je to scalar, vrátí array s jednou hodnotou.
-     * Jinak vrátí prázdné pole.
      *
-     * @param mixed $value
-     * @return array
+     * @template T
+     * @param iterable<T>|T|null $value
+     * @return array<T>
      */
     public static function toArray(mixed $value): array
     {
