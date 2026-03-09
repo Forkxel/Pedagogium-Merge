@@ -20,7 +20,7 @@ class UserService
             return ['error' => 'User exists'];
         }
 
-        $encrypted = $this->passwordService->encrypt($password);
+        $encrypted = $this->passwordService->hash($password);
         $user = new User($username, $encrypted);
 
         $this->em->persist($user);
@@ -34,7 +34,7 @@ class UserService
         $user = $this->repo->findOneBy(['username' => $username]);
         if (!$user) return null;
 
-        return $this->passwordService->decrypt($user->getPassword());
+        return $this->passwordService->verify($plainPassword, $storedHash);
     }
 
     public function checkUser(string $username, string $password): bool
@@ -45,6 +45,6 @@ class UserService
             return false;
         }
 
-        return $user->getPassword() === $password;
+        return $this->passwordService->verify($password, $user->getPassword());
     }
 }
