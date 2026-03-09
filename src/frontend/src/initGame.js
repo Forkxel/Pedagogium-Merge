@@ -40,7 +40,7 @@ export default function initGame() {
         { radius: 32, color: [150, 0, 255], score: 6, sprite: "studenkova" },
         { radius: 40, color: [255, 255, 0], score: 10 , sprite: "meitnerova"},
         { radius: 50, color: [255, 150, 0], score: 15 , sprite: "vana"},
-        { radius: 62, color: [255, 0, 50], score: 20},      // 6. Papula
+        { radius: 62, color: [255, 0, 50], score: 20, sprite: "losos"},      // 6. Papula
         { radius: 75, color: [255, 255, 150], score: 28 , sprite: "adamek"},
         { radius: 90, color: [255, 50, 200], score: 36 , sprite: "prochazka"},
         { radius: 105, color: [255, 200, 0], score: 45 , sprite: "masopust"},
