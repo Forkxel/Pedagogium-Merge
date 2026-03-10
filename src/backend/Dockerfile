@@ -5,11 +5,15 @@ WORKDIR /app
 ENV APP_ENV=prod
 ENV APP_DEBUG=0
 
-RUN apk add --no-cache bash icu-dev libzip-dev zlib-dev postgresql-dev git
+RUN apk add --no-cache \
+    bash icu-dev libzip-dev zlib-dev postgresql-dev git curl
 
 RUN docker-php-ext-install pdo pdo_pgsql intl zip opcache
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+RUN curl -sS https://get.symfony.com/cli/installer | bash \
+    && mv /root/.symfony*/bin/symfony /usr/local/bin/symfony
 
 COPY . .
 
@@ -17,4 +21,4 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 EXPOSE 80
 
-CMD ["php", "-S", "0.0.0.0:80", "-t", "public"]
+CMD ["symfony", "serve", "--no-tls", "--allow-http", "--listen-ip=0.0.0.0", "--port=80"]
