@@ -20,14 +20,14 @@ class UtmApiController
     #[Route('/track', name: 'utm_track', methods: ['POST'])]
     public function track(Request $request): JsonResponse
     {
-        $limiter = $this->utmTrackLimiter->create($request->getClientIp() ?? 'anon');
-        $limit = $limiter->consume();
+        $limit = $this->utmTrackLimiter
+            ->create($request->getClientIp() ?? 'anon')
+            ->consume();
 
         if (!$limit->isAccepted()) {
             return new JsonResponse(['error' => 'Too many requests'], 429);
         }
 
-        /** @var array<string, mixed> $data */
         $data = json_decode($request->getContent(), true) ?? [];
 
         $source   = TypeCast::toString($data['utm_source'] ?? '');

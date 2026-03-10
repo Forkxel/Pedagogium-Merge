@@ -19,20 +19,19 @@ class ScoreController
     #[Route('/submit', name: 'score_submit', methods: ['POST'])]
     public function submit(Request $request): JsonResponse
     {
-        $limiter = $this->scoreSubmitLimiter->create($request->getClientIp() ?? 'anon');
-        $limit = $limiter->consume();
+        $limit = $this->scoreSubmitLimiter
+            ->create($request->getClientIp() ?? 'anon')
+            ->consume();
 
         if (!$limit->isAccepted()) {
             return new JsonResponse(['error' => 'Too many requests'], 429);
         }
 
-        /** @var array<string, mixed> $data */
         $data = json_decode($request->getContent(), true) ?? [];
 
         $username = TypeCast::toString($data['username'] ?? '');
         $score    = TypeCast::toInt($data['score'] ?? 0);
 
-        // ochrana proti injection
         if (!preg_match('/^[a-zA-Z0-9_]{3,20}$/', $username)) {
             return new JsonResponse(['error' => 'Invalid username format'], 400);
         }
