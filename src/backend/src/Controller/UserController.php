@@ -1,28 +1,36 @@
 <?php
+
 namespace App\Controller;
 
 use App\Service\UserService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 use App\Utils\TypeCast;
 
 #[Route('/api/user')]
 class UserController
 {
-    public function __construct(private UserService $userService) {}
+    public function __construct(
+        private UserService $userService,
+        private RateLimiterFactory $loginApiLimiter
+    ) {}
 
     #[Route('/register', name: 'user_register', methods: ['POST'])]
     public function register(Request $request): JsonResponse
     {
-        /** @var array<string, mixed> $data */
-        $data = json_decode($request->getContent(), true) ?? [];
+        $data = TypeCast::toArray(json_decode($request->getContent(), true));
 
         $username = TypeCast::toString($data['username'] ?? '');
         $password = TypeCast::toString($data['password'] ?? '');
 
-        if ($username === '' || $password === '') {
-            return new JsonResponse(['error' => 'Invalid input'], 400);
+        if (!preg_match('/^[a-zA-Z0-9_]{3,20}$/', $username)) {
+            return new JsonResponse(['error' => 'Invalid username format'], 400);
+        }
+
+        if (strlen($password) < 6) {
+            return new JsonResponse(['error' => 'Password too short'], 400);
         }
 
         $result = $this->userService->register($username, $password);
@@ -37,14 +45,25 @@ class UserController
     #[Route('/login', name: 'user_login', methods: ['POST'])]
     public function login(Request $request): JsonResponse
     {
-        /** @var array<string, mixed> $data */
-        $data = json_decode($request->getContent(), true) ?? [];
+        $limit = $this->loginApiLimiter
+            ->create($request->getClientIp() ?? 'anon')
+            ->consume();
+
+        if (!$limit->isAccepted()) {
+            return new JsonResponse(['error' => 'Too many requests'], 429);
+        }
+
+        $data = TypeCast::toArray(json_decode($request->getContent(), true));
 
         $username = TypeCast::toString($data['username'] ?? '');
         $password = TypeCast::toString($data['password'] ?? '');
 
-        if ($username === '' || $password === '') {
-            return new JsonResponse(['error' => 'Invalid input'], 400);
+        if (!preg_match('/^[a-zA-Z0-9_]{3,20}$/', $username)) {
+            return new JsonResponse(['error' => 'Invalid username'], 400);
+        }
+
+        if ($password === '') {
+            return new JsonResponse(['error' => 'Invalid password'], 400);
         }
 
         $isValid = $this->userService->checkUser($username, $password);
