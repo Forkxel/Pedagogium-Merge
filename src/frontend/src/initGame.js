@@ -53,14 +53,58 @@ export default function initGame() {
 
     const wallWidth = 8;
 
+    // Ovládání myší / prstem
+    let pointerX = k.width() / 2;
+
+    const updatePointerFromEvent = (e) => {
+        const rect = canvas.getBoundingClientRect();
+
+        let clientX = 0;
+
+        if (e.touches && e.touches[0]) {
+            clientX = e.touches[0].clientX;
+        } else if (e.changedTouches && e.changedTouches[0]) {
+            clientX = e.changedTouches[0].clientX;
+        } else {
+            clientX = e.clientX;
+        }
+
+        const relativeX = ((clientX - rect.left) / rect.width) * k.width();
+        pointerX = relativeX;
+    };
+
     // DEFINICE SCÉNY
     k.scene("main", () => {
         k.setGravity(1000);
 
         let isGameOver = false;
         let dropLocked = false;
-        const LOSE_LINE = 40;
+        const LOSE_LINE = 50;
+        const PREVIEW_Y = LOSE_LINE - 22;
         let currentFruit = null;
+
+        const clampSpawnX = (x, radius = 30) => {
+            return k.clamp(x, wallWidth + radius, k.width() - wallWidth - radius);
+        };
+
+        const getPreviewX = (level) => {
+            return clampSpawnX(pointerX || k.width() / 2, FRUITS[level].radius);
+        };
+
+        function isSpawnBlocked(spawnX, spawnY, level) {
+            const radius = FRUITS[level].radius;
+
+            return k.get("fruit").some((f) => {
+                if (!f.isDropped) return false;
+
+                const otherRadius = FRUITS[f.level].radius;
+                const dx = f.pos.x - spawnX;
+                const dy = f.pos.y - spawnY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                return distance < radius + otherRadius - 4;
+            });
+        }
 
         // Podlaha a stěny
         const addWall = (x, y, w, h) => {
@@ -112,9 +156,9 @@ export default function initGame() {
             fruit.use(k.area({ shape: new k.Circle(k.vec2(0), data.radius / targetScale) }));
             fruit.use(k.body({
                 isStatic: !isDropped,
-                friction: 0.5,
-                restitution: 0.2,
-                drag: 0.1
+                friction: 0.92,
+                restitution: 0.01,
+                drag: 0.45
             }));
 
             if (isDropped) {
@@ -135,38 +179,7 @@ export default function initGame() {
             window.dispatchEvent(new CustomEvent("gameOver"));
         }
 
-        const prepareNext = () => {
-            if (isGameOver) return;
-            const randomLevel = k.choose([0, 1, 2]);
-            currentFruit = spawnFruitAt(k.mousePos().x || k.width() / 2, 70, randomLevel, false);
-            dropLocked = false;
-        };
-
-        k.wait(0.2, prepareNext);
-
-        k.onUpdate(() => {
-            if (isGameOver) return;
-
-            if (currentFruit && !currentFruit.isDropped) {
-                currentFruit.pos.x = k.clamp(k.mousePos().x, wallWidth + 30, k.width() - wallWidth - 30);
-                currentFruit.pos.y = 70;
-            }
-        });
-
-        k.onUpdate("fruit", (f) => {
-            if (isGameOver) return;
-
-            if (f.isDropped && f.pos.y < LOSE_LINE) {
-                f.timeAboveLine += k.dt();
-                if (f.timeAboveLine > 2) {
-                    gameOver();
-                }
-            } else {
-                f.timeAboveLine = 0;
-            }
-        });
-
-        k.onMousePress(() => {
+        const dropCurrentFruit = () => {
             if (isGameOver) return;
             if (dropLocked) return;
 
@@ -182,6 +195,69 @@ export default function initGame() {
 
                 spawnFruitAt(x, y, level, true);
                 k.wait(0.8, prepareNext);
+            }
+        };
+
+        const handlePointerDown = (e) => {
+            updatePointerFromEvent(e);
+        };
+
+        const handlePointerMove = (e) => {
+            updatePointerFromEvent(e);
+        };
+
+        const handlePointerUp = (e) => {
+            updatePointerFromEvent(e);
+            dropCurrentFruit();
+        };
+
+        canvas.addEventListener("pointerdown", handlePointerDown);
+        canvas.addEventListener("pointermove", handlePointerMove);
+        canvas.addEventListener("pointerup", handlePointerUp);
+        canvas.addEventListener("pointercancel", handlePointerUp);
+
+        const prepareNext = () => {
+            if (isGameOver) return;
+
+            const randomLevel = k.choose([0, 1, 2]);
+            const spawnX = getPreviewX(randomLevel);
+            const spawnY = PREVIEW_Y;
+
+            if (isSpawnBlocked(spawnX, spawnY, randomLevel)) {
+                gameOver();
+                return;
+            }
+
+            currentFruit = spawnFruitAt(spawnX, spawnY, randomLevel, false);
+            dropLocked = false;
+        };
+
+        k.wait(0.2, prepareNext);
+
+        k.onUpdate(() => {
+            if (isGameOver) return;
+
+            if (currentFruit && !currentFruit.isDropped) {
+                const radius = FRUITS[currentFruit.level].radius;
+                currentFruit.pos.x = clampSpawnX(pointerX || k.width() / 2, radius);
+                currentFruit.pos.y = PREVIEW_Y;
+            }
+        });
+
+        k.onUpdate("fruit", (f) => {
+            if (isGameOver) return;
+            if (!f.isDropped) return;
+
+            const radius = FRUITS[f.level].radius;
+            const topOfFruit = f.pos.y - radius;
+
+            if (topOfFruit < LOSE_LINE) {
+                f.timeAboveLine += k.dt();
+                if (f.timeAboveLine > 2) {
+                    gameOver();
+                }
+            } else {
+                f.timeAboveLine = 0;
             }
         });
 
