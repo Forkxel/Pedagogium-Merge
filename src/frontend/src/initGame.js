@@ -11,19 +11,19 @@ export default function initGame() {
     };
 
     // Nastavení stylu canvasu
-    canvas.style.imageRendering = "pixelated"; 
+    canvas.style.imageRendering = "pixelated";
     canvas.style.imageRendering = "crisp-edges";
     canvas.style.touchAction = "none";
     canvas.style.display = "block";
     canvas.style.margin = "auto";
-    
+
     const k = kaplay({
         global: false,
         canvas: canvas,
         width: 400,
         height: 550,
-        background: COLORS.background, 
-        pixelDensity: window.devicePixelRatio || 2, 
+        background: COLORS.background,
+        pixelDensity: window.devicePixelRatio || 2,
         texFilter: "linear",
     });
 
@@ -39,31 +39,77 @@ export default function initGame() {
     k.loadSprite("mandik", "/mandik.png");
 
     const FRUITS = [
-        { radius: 18, score: 2, sprite: "losos"},
-        { radius: 25, score: 4 , sprite: "logo"},
+        { radius: 18, score: 2, sprite: "losos" },
+        { radius: 25, score: 4, sprite: "logo" },
         { radius: 32, score: 6, sprite: "studenkova" },
-        { radius: 40, score: 10 , sprite: "meitnerova"},
-        { radius: 50, score: 15 , sprite: "vana"},
-        { radius: 62, score: 20, sprite: "losos"},
-        { radius: 75, score: 28 , sprite: "adamek"},
-        { radius: 90, score: 36 , sprite: "prochazka"},
-        { radius: 105, score: 45 , sprite: "masopust"},
-        { radius: 125, score: 100 , sprite: "mandik"},
+        { radius: 40, score: 10, sprite: "meitnerova" },
+        { radius: 50, score: 15, sprite: "vana" },
+        { radius: 62, score: 20, sprite: "losos" },
+        { radius: 75, score: 28, sprite: "adamek" },
+        { radius: 90, score: 36, sprite: "prochazka" },
+        { radius: 105, score: 45, sprite: "masopust" },
+        { radius: 125, score: 100, sprite: "mandik" },
     ];
 
     const wallWidth = 8;
 
+    // Ovládání myší / prstem
+    let pointerX = k.width() / 2;
+
+    const updatePointerFromEvent = (e) => {
+        const rect = canvas.getBoundingClientRect();
+
+        let clientX = 0;
+
+        if (e.touches && e.touches[0]) {
+            clientX = e.touches[0].clientX;
+        } else if (e.changedTouches && e.changedTouches[0]) {
+            clientX = e.changedTouches[0].clientX;
+        } else {
+            clientX = e.clientX;
+        }
+
+        const relativeX = ((clientX - rect.left) / rect.width) * k.width();
+        pointerX = relativeX;
+    };
+
     // DEFINICE SCÉNY
     k.scene("main", () => {
         k.setGravity(1000);
+
         let isGameOver = false;
-        const LOSE_LINE = 40; 
+        let dropLocked = false;
+        const LOSE_LINE = 50;
+        const PREVIEW_Y = LOSE_LINE - 22;
         let currentFruit = null;
+
+        const clampSpawnX = (x, radius = 30) => {
+            return k.clamp(x, wallWidth + radius, k.width() - wallWidth - radius);
+        };
+
+        const getPreviewX = (level) => {
+            return clampSpawnX(pointerX || k.width() / 2, FRUITS[level].radius);
+        };
+
+        function isSpawnBlocked(spawnX, spawnY, level) {
+            const radius = FRUITS[level].radius;
+
+            return k.get("fruit").some((f) => {
+                if (!f.isDropped) return false;
+
+                const otherRadius = FRUITS[f.level].radius;
+                const dx = f.pos.x - spawnX;
+                const dy = f.pos.y - spawnY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                return distance < radius + otherRadius - 4;
+            });
+        }
 
         // Podlaha a stěny
         const addWall = (x, y, w, h) => {
             k.add([
-                k.pos(x, y), 
+                k.pos(x, y),
                 k.rect(w, h),
                 k.area(),
                 k.outline(2, k.rgb(COLORS.walls)),
@@ -74,8 +120,8 @@ export default function initGame() {
         };
 
         addWall(0, k.height() - wallWidth, k.width(), wallWidth); // Podlaha
-        addWall(0, 0, wallWidth, k.height()); // Levá
-        addWall(k.width() - wallWidth, 0, wallWidth, k.height()); // Pravá
+        addWall(0, 0, wallWidth, k.height()); // Levá stěna
+        addWall(k.width() - wallWidth, 0, wallWidth, k.height()); // Pravá stěna
 
         k.add([
             k.rect(k.width(), 2),
@@ -86,19 +132,19 @@ export default function initGame() {
 
         function spawnFruitAt(x, y, level, isDropped = false) {
             const data = FRUITS[level];
-            const imageWidth = 267; 
+            const imageWidth = 267;
             const targetScale = (data.radius * 2) / imageWidth;
 
             const fruit = k.add([
                 k.pos(x, y),
                 k.anchor("center"),
-                k.rotate(0), 
+                k.rotate(0),
                 "fruit",
-                { 
-                    level: level, 
-                    isDropped: isDropped, 
+                {
+                    level,
+                    isDropped,
                     isMerging: false,
-                    timeAboveLine: 0 
+                    timeAboveLine: 0,
                 }
             ]);
 
@@ -108,11 +154,11 @@ export default function initGame() {
             }
 
             fruit.use(k.area({ shape: new k.Circle(k.vec2(0), data.radius / targetScale) }));
-            fruit.use(k.body({ 
-                isStatic: !isDropped, 
-                friction: 0.5, 
-                restitution: 0.2, 
-                drag: 0.1
+            fruit.use(k.body({
+                isStatic: !isDropped,
+                friction: 0.92,
+                restitution: 0.01,
+                drag: 0.45
             }));
 
             if (isDropped) {
@@ -125,70 +171,21 @@ export default function initGame() {
         function gameOver() {
             if (isGameOver) return;
             isGameOver = true;
-            
-            k.get("fruit").forEach((f) => { f.paused = true; });
 
-            k.add([
-                k.rect(k.width(), k.height()),
-                k.color(0, 0, 0),
-                k.opacity(0.6),
-                k.fixed(),
-            ]);
-
-            k.add([
-                k.text("GAME OVER", { size: 42 }),
-                k.pos(k.center().x, k.center().y - 30),
-                k.anchor("center"),
-                k.color(255, 255, 255),
-            ]);
-
-            k.add([
-                k.text("Click to Restart", { size: 24 }),
-                k.pos(k.center().x, k.center().y + 30),
-                k.anchor("center"),
-                k.color(0, 255, 204),
-            ]);
+            k.get("fruit").forEach((f) => {
+                f.paused = true;
+            });
 
             window.dispatchEvent(new CustomEvent("gameOver"));
-
-            k.onMousePress(() => {
-                k.go("main");
-            });
         }
 
-        const prepareNext = () => {
+        const dropCurrentFruit = () => {
             if (isGameOver) return;
-            const randomLevel = k.choose([0, 1, 2]);
-            currentFruit = spawnFruitAt(k.mousePos().x || k.width()/2, 70, randomLevel, false);
-        };
-
-        k.wait(0.2, prepareNext);
-
-        k.onUpdate(() => {
-            if (isGameOver) return;
+            if (dropLocked) return;
 
             if (currentFruit && !currentFruit.isDropped) {
-                currentFruit.pos.x = k.clamp(k.mousePos().x, wallWidth + 30, k.width() - wallWidth - 30);
-                currentFruit.pos.y = 70;
-            }
-        });
+                dropLocked = true;
 
-        k.onUpdate("fruit", (f) => {
-            if (isGameOver) return;
-
-            if (f.isDropped && f.pos.y < LOSE_LINE) {
-                f.timeAboveLine += k.dt(); 
-                if (f.timeAboveLine > 2) {
-                    gameOver();
-                }
-            } else {
-                f.timeAboveLine = 0;
-            }
-        });
-
-        k.onMousePress(() => {
-            if (isGameOver) return;
-            if (currentFruit && !currentFruit.isDropped) {
                 const x = currentFruit.pos.x;
                 const y = currentFruit.pos.y;
                 const level = currentFruit.level;
@@ -199,13 +196,78 @@ export default function initGame() {
                 spawnFruitAt(x, y, level, true);
                 k.wait(0.8, prepareNext);
             }
+        };
+
+        const handlePointerDown = (e) => {
+            updatePointerFromEvent(e);
+        };
+
+        const handlePointerMove = (e) => {
+            updatePointerFromEvent(e);
+        };
+
+        const handlePointerUp = (e) => {
+            updatePointerFromEvent(e);
+            dropCurrentFruit();
+        };
+
+        canvas.addEventListener("pointerdown", handlePointerDown);
+        canvas.addEventListener("pointermove", handlePointerMove);
+        canvas.addEventListener("pointerup", handlePointerUp);
+        canvas.addEventListener("pointercancel", handlePointerUp);
+
+        const prepareNext = () => {
+            if (isGameOver) return;
+
+            const randomLevel = k.choose([0, 1, 2]);
+            const spawnX = getPreviewX(randomLevel);
+            const spawnY = PREVIEW_Y;
+
+            if (isSpawnBlocked(spawnX, spawnY, randomLevel)) {
+                gameOver();
+                return;
+            }
+
+            currentFruit = spawnFruitAt(spawnX, spawnY, randomLevel, false);
+            dropLocked = false;
+        };
+
+        k.wait(0.2, prepareNext);
+
+        k.onUpdate(() => {
+            if (isGameOver) return;
+
+            if (currentFruit && !currentFruit.isDropped) {
+                const radius = FRUITS[currentFruit.level].radius;
+                currentFruit.pos.x = clampSpawnX(pointerX || k.width() / 2, radius);
+                currentFruit.pos.y = PREVIEW_Y;
+            }
+        });
+
+        k.onUpdate("fruit", (f) => {
+            if (isGameOver) return;
+            if (!f.isDropped) return;
+
+            const radius = FRUITS[f.level].radius;
+            const topOfFruit = f.pos.y - radius;
+
+            if (topOfFruit < LOSE_LINE) {
+                f.timeAboveLine += k.dt();
+                if (f.timeAboveLine > 2) {
+                    gameOver();
+                }
+            } else {
+                f.timeAboveLine = 0;
+            }
         });
 
         k.onCollide("fruit", "fruit", (a, b) => {
             if (a.level !== b.level || a.isMerging || b.isMerging) return;
             if (a.level >= FRUITS.length - 1) return;
 
-            a.isMerging = b.isMerging = true;
+            a.isMerging = true;
+            b.isMerging = true;
+
             const nextLevel = a.level + 1;
             const pos = a.pos.lerp(b.pos, 0.5);
 

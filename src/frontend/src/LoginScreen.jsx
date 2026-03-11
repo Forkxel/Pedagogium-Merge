@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { registerUser } from "./userApi";
+import { registerUser, loginUser } from "./userApi";
 
 export default function LoginScreen({ onLogin }) {
   const [mode, setMode] = useState("login");
@@ -7,6 +7,7 @@ export default function LoginScreen({ onLogin }) {
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [guestLocked, setGuestLocked] = useState(false);
 
   useEffect(() => {
     document.body.style.margin = "0";
@@ -18,30 +19,46 @@ export default function LoginScreen({ onLogin }) {
     };
   }, []);
 
+  const isValidUsername = (value) => /^[a-zA-Z0-9_]{3,20}$/.test(value);
+
   const canSubmit = useMemo(() => {
-    return username.trim().length > 0 && password.length >= 5 && !isLoading;
+    return username.trim().length > 0 && password.length >= 6 && !isLoading;
   }, [username, password, isLoading]);
 
   const submit = async (e) => {
     e.preventDefault();
     if (!canSubmit) return;
 
+    const trimmedUsername = username.trim();
+
+    if (!isValidUsername(trimmedUsername)) {
+      setMsg("Username must be 3-20 characters and only letters, numbers or _.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setMsg("Password must have at least 6 characters.");
+      return;
+    }
+
     setMsg("");
     setIsLoading(true);
 
     try {
       if (mode === "signup") {
-        await registerUser(username, password);
-        
-        localStorage.setItem("authUser", username);
-        onLogin(username);
+        await registerUser(trimmedUsername, password);
+        localStorage.setItem("authUser", trimmedUsername);
+        onLogin(trimmedUsername);
       } else {
-        if (username && password.length >= 5) {
-          localStorage.setItem("authUser", username);
-          onLogin(username);
-        } else {
-          setMsg("Invalid username or password.");
+        const data = await loginUser(trimmedUsername, password);
+
+        if (!data?.success) {
+          setMsg(data?.message || "Invalid username or password.");
+          return;
         }
+
+        localStorage.setItem("authUser", data.username || trimmedUsername);
+        onLogin(data.username || trimmedUsername);
       }
     } catch (err) {
       setMsg(err.message || "Server connection error");
@@ -51,9 +68,15 @@ export default function LoginScreen({ onLogin }) {
   };
 
   const loginAsGuest = () => {
+    if (guestLocked) return;
+
+    setGuestLocked(true);
+
     const guestUser = "Guest_" + Math.floor(Math.random() * 1000);
     localStorage.setItem("authUser", guestUser);
     onLogin(guestUser);
+
+    setTimeout(() => setGuestLocked(false), 1200);
   };
 
   return (
