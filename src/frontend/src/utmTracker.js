@@ -8,7 +8,6 @@ export function trackUTM() {
   const utm_campaign = params.get("utm_campaign");
 
   if (!utm_source || !utm_medium || !utm_campaign) return;
-
   if (localStorage.getItem("utmTracked")) return;
 
   fetch(`${API_BASE}/utm/track`, {

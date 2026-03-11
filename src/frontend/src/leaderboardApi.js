@@ -27,3 +27,12 @@ export async function submitScore(username, score) {
 
   return res.json();
 }
+
+export function submitScoreKeepalive(username, score) {
+  return fetch(`${API_BASE}/score/submit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, score }),
+    keepalive: true,
+  });
+}

@@ -1,21 +1,31 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { fetchTop5 } from "./leaderboardApi";
 
 export default function LeaderboardPage() {
   const [top5, setTop5] = useState([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const currentUser = localStorage.getItem("authUser") || "";
+  const lastRefreshRef = useRef(0);
 
-  const loadTop5 = async () => {
+  const loadTop5 = async (force = false) => {
+    const now = Date.now();
+    if (!force && now - lastRefreshRef.current < 1200) return;
+
+    lastRefreshRef.current = now;
+    setIsRefreshing(true);
+
     try {
       const data = await fetchTop5();
-      setTop5(data);
+      setTop5(Array.isArray(data) ? data : []);
     } catch {
       console.error("Error loading leaderboard");
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
-    loadTop5();
+    loadTop5(true);
   }, []);
 
   const isCurrentUserInTop5 = top5.some((p) => p.username === currentUser);
