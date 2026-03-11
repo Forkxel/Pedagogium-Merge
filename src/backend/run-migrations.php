@@ -18,13 +18,33 @@ if (!$databaseUrl) {
 
 $parts = parse_url($databaseUrl);
 
+if ($parts === false) {
+    throw new RuntimeException('Invalid DATABASE_URL format.');
+}
+
+$host = $parts['host'] ?? null;
+$port = $parts['port'] ?? 5432;
+$path = $parts['path'] ?? null;
+$user = $parts['user'] ?? null;
+$password = $parts['pass'] ?? null;
+
+if ($host === null || $path === null || $user === null || $password === null) {
+    throw new RuntimeException('DATABASE_URL is missing required parts.');
+}
+
+$dbname = ltrim($path, '/');
+
+if ($dbname === '') {
+    throw new RuntimeException('DATABASE_URL is missing database name.');
+}
+
 $connection = DriverManager::getConnection([
     'driver' => 'pdo_pgsql',
-    'host' => $parts['host'],
-    'port' => $parts['port'] ?? 5432,
-    'dbname' => ltrim($parts['path'], '/'),
-    'user' => $parts['user'],
-    'password' => $parts['pass'],
+    'host' => $host,
+    'port' => $port,
+    'dbname' => $dbname,
+    'user' => $user,
+    'password' => $password,
 ]);
 
 $config = new PhpFile(__DIR__ . '/migrations.php');
