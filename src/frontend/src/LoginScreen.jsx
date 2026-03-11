@@ -35,33 +35,41 @@ export default function LoginScreen({ onLogin }) {
     if (!canSubmit) return;
     setMsg("");
 
-    if (username.trim().toLowerCase().startsWith("guest_") && username.trim().startsWith("Guest_")) {
-      setMsg("Username cannot start with 'guest_'. or 'Guest_'.");
+  const trimmedUsername = username.trim();
+
+  if (mode === "signup") {
+    if (trimmedUsername.toLowerCase().startsWith("guest_")) {
+      setMsg("Registration failed: 'Guest_' prefix is reserved for guests only.");
       return;
     }
+  }
 
-    setIsLoading(true);
+  if (mode === "login" && trimmedUsername.toLowerCase().startsWith("guest_")) {
+    setMsg("You cannot log in as 'Guest_'. Use 'Play as Guest' button instead.");
+    return;
+  }
 
-    try {
-      if (mode === "signup") {
-        await registerUser(username.trim(), password);
-        localStorage.setItem("authUser", username.trim());
-        onLogin(username.trim());
-      } else {
-        const data = await loginUser(username.trim(), password);
-        if (!data?.success) {
-          setMsg(data?.message || "Invalid credentials.");
-          return;
-        }
-        localStorage.setItem("authUser", data.username || username.trim());
-        onLogin(data.username || username.trim());
+  setIsLoading(true);
+  try {
+    if (mode === "signup") {
+      await registerUser(trimmedUsername, password);
+      localStorage.setItem("authUser", trimmedUsername);
+      onLogin(trimmedUsername);
+    } else {
+      const data = await loginUser(trimmedUsername, password);
+      if (!data?.success) {
+        setMsg(data?.message || "Invalid credentials.");
+        return;
       }
-    } catch (err) {
-      setMsg(err.message || "Connection error");
-    } finally {
-      setIsLoading(false);
+      localStorage.setItem("authUser", data.username || trimmedUsername);
+      onLogin(data.username || trimmedUsername);
     }
-  };
+  } catch (err) {
+    setMsg(err.message || "Connection error");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleGuestLogin = () => {
     if (guestLocked) return;
@@ -125,7 +133,28 @@ export default function LoginScreen({ onLogin }) {
         border: `1px solid ${COLORS.primary}44`, padding: "2rem", width: "100%", maxWidth: "400px",
         display: "flex", flexDirection: "column", alignItems: "center", boxSizing: "border-box"
       }}>
-        
+        <div style={{
+          width: "100%",
+          padding: "0.8rem",
+          marginBottom: "1.2rem",
+          borderRadius: "14px",
+          backgroundColor: "rgba(255, 193, 7, 0.1)",
+          border: "1px solid rgba(255, 193, 7, 0.3)",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px"
+        }}>
+          <span style={{ fontSize: "1.2rem" }}></span>
+          <p style={{ 
+            color: "#FFD54F", 
+            fontSize: "0.75rem", 
+            margin: 0, 
+            lineHeight: "1.4",
+            textAlign: "left" 
+          }}>
+            <strong>Browser Tip:</strong> For the best experience, please use <strong>Google Chrome</strong>. Safari may cause display or performance issues.
+          </p>
+        </div>
         <h1 style={{ color: COLORS.accent, fontSize: "1.8rem", margin: "0 0 0.5rem 0", textShadow: `0 0 10px ${COLORS.primary}66` }}>
             PEDAGOGIUM MERGE
         </h1>
@@ -198,7 +227,7 @@ export default function LoginScreen({ onLogin }) {
 
           {msg && (
             <div style={{ color: "#ff4c4c", fontSize: "0.85rem", textAlign: "center" }}>
-              ⚠️ {msg}
+              {msg}
             </div>
           )}
 
@@ -223,7 +252,6 @@ export default function LoginScreen({ onLogin }) {
           <div style={{ flex: 1, height: "1px", background: `${COLORS.primary}33` }}></div>
         </div>
 
-        {/* ZMĚNA ZDE: Tlačítko teď jen otevírá varování */}
         <button
           onClick={() => setShowGuestWarning(true)}
           style={{
