@@ -16,6 +16,7 @@ export default function LoginScreen({ onLogin }) {
   const [msg, setMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [guestLocked, setGuestLocked] = useState(false);
+  const [showGuestWarning, setShowGuestWarning] = useState(false);
 
   useEffect(() => {
     document.body.style.margin = "0";
@@ -33,6 +34,12 @@ export default function LoginScreen({ onLogin }) {
     e.preventDefault();
     if (!canSubmit) return;
     setMsg("");
+
+    if (username.trim().toLowerCase().startsWith("guest_") && username.trim().toLowerCase().startsWith("Guest_")) {
+      setMsg("Username cannot start with 'guest_'. or 'Guest_'.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -56,7 +63,7 @@ export default function LoginScreen({ onLogin }) {
     }
   };
 
-  const loginAsGuest = () => {
+  const handleGuestLogin = () => {
     if (guestLocked) return;
     setGuestLocked(true);
     const guestUser = "Guest_" + Math.floor(Math.random() * 1000);
@@ -71,6 +78,47 @@ export default function LoginScreen({ onLogin }) {
       background: `radial-gradient(circle at center, ${COLORS.deep} 0%, ${COLORS.void} 100%)`,
       padding: "1rem", boxSizing: "border-box", position: "fixed", top: 0, left: 0
     }}>
+
+      {showGuestWarning && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
+          backgroundColor: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex",
+          justifyContent: "center", alignItems: "center", backdropFilter: "blur(5px)"
+        }}>
+          <div style={{
+            backgroundColor: COLORS.void, border: `2px solid ${COLORS.accent}`,
+            padding: "2rem", borderRadius: "20px", maxWidth: "320px", textAlign: "center",
+            boxShadow: `0 0 30px ${COLORS.accent}44`
+          }}>
+            <h3 style={{ color: "white", marginTop: 0 }}>Play as Guest?</h3>
+            <p style={{ color: COLORS.highlight, fontSize: "0.9rem", lineHeight: "1.4" }}>
+              Warning: Guest progress <strong>will not be saved</strong>. You will lose all data once you close the browser or log out.
+            </p>
+            <div style={{ display: "flex", gap: "10px", marginTop: "1.5rem" }}>
+              <button 
+                onClick={() => setShowGuestWarning(false)}
+                style={{ 
+                  flex: 1, padding: "0.7rem", borderRadius: "10px", 
+                  border: `1px solid ${COLORS.accent}`, backgroundColor: "transparent", 
+                  color: "white", cursor: "pointer", fontWeight: "bold" 
+                }}
+              >
+                Go Back
+              </button>
+              <button 
+                onClick={handleGuestLogin}
+                style={{ 
+                  flex: 1, padding: "0.7rem", borderRadius: "10px", border: "none", 
+                  backgroundColor: COLORS.accent, color: COLORS.void, 
+                  cursor: "pointer", fontWeight: "bold" 
+                }}
+              >
+                I Understand
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{
         backgroundColor: "#041124d9", backdropFilter: "blur(20px)", borderRadius: "28px",
         boxShadow: `0 25px 50px rgba(0,0,0,0.5), 0 0 30px rgba(38, 116, 188, 0.2)`,
@@ -175,8 +223,9 @@ export default function LoginScreen({ onLogin }) {
           <div style={{ flex: 1, height: "1px", background: `${COLORS.primary}33` }}></div>
         </div>
 
+        {/* ZMĚNA ZDE: Tlačítko teď jen otevírá varování */}
         <button
-          onClick={loginAsGuest}
+          onClick={() => setShowGuestWarning(true)}
           style={{
             width: "100%", padding: "0.9rem", borderRadius: "14px", border: `1px solid ${COLORS.primary}66`,
             backgroundColor: "transparent", color: COLORS.highlight, fontWeight: "bold",
