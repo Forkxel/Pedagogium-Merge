@@ -3,7 +3,6 @@
 namespace App\Controller;
 
 use App\Service\ScoreService;
-use App\Service\UserService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
@@ -15,101 +14,43 @@ class ScoreController
 {
     public function __construct(
         private ScoreService $scoreService,
-        private UserService $userService,
         private RateLimiterFactory $scoreSubmitLimiter
     ) {}
-
-    #[Route('/start', name: 'score_start', methods: ['POST'])]
-    public function start(Request $request): JsonResponse
-    {
-        $session = $request->getSession();
-        $userId = $session->get('user_id');
-
-        if (!$userId) {
-            return new JsonResponse(['error' => 'Unauthorized'], 401);
-        }
-
-        $token = bin2hex(random_bytes(32));
-
-        $activeGames = $session->get('active_game_tokens', []);
-        $activeGames[$token] = [
-            'started_at' => time(),
-            'used' => false,
-            'ip' => $request->getClientIp(),
-            'ua' => substr((string) $request->headers->get('User-Agent'), 0, 255),
-        ];
-
-        $session->set('active_game_tokens', $activeGames);
-
-        return new JsonResponse([
-            'gameToken' => $token,
-        ]);
-    }
 
     #[Route('/submit', name: 'score_submit', methods: ['POST'])]
     public function submit(Request $request): JsonResponse
     {
-        $session = $request->getSession();
-        $userId = $session->get('user_id');
-
-        if (!$userId) {
-            return new JsonResponse(['error' => 'Unauthorized'], 401);
-        }
+        $ip = $request->getClientIp() ?? 'anon';
 
         $limit = $this->scoreSubmitLimiter
-            ->create($request->getClientIp() ?? 'anon')
+            ->create($ip)
             ->consume();
 
         if (!$limit->isAccepted()) {
             return new JsonResponse(['error' => 'Too many requests'], 429);
         }
 
-        $data = TypeCast::toArray(json_decode($request->getContent(), true));
+        $decoded = json_decode($request->getContent(), true);
 
-        $gameToken = TypeCast::toString($data['gameToken'] ?? '');
+        if (!is_array($decoded)) {
+            return new JsonResponse(['error' => 'Invalid JSON'], 400);
+        }
+
+        /** @var array<string, mixed> $data */
+        $data = $decoded;
+
+        $username = TypeCast::toString($data['username'] ?? '');
         $score = TypeCast::toInt($data['score'] ?? 0);
 
-        if ($gameToken === '') {
-            return new JsonResponse(['error' => 'Missing game token'], 400);
+        if (!preg_match('/^[a-zA-Z0-9_]{3,20}$/', $username)) {
+            return new JsonResponse(['error' => 'Invalid username format'], 400);
         }
 
         if ($score <= 0 || $score > 1000000) {
             return new JsonResponse(['error' => 'Invalid score'], 400);
         }
 
-        $activeGames = $session->get('active_game_tokens', []);
-        $game = $activeGames[$gameToken] ?? null;
-
-        if (!$game) {
-            return new JsonResponse(['error' => 'Invalid game token'], 400);
-        }
-
-        if (($game['used'] ?? false) === true) {
-            return new JsonResponse(['error' => 'Game token already used'], 400);
-        }
-
-        $startedAt = (int) ($game['started_at'] ?? 0);
-        $duration = time() - $startedAt;
-
-        if ($startedAt <= 0 || $duration < 5) {
-            return new JsonResponse(['error' => 'Game session too short'], 400);
-        }
-
-        if ($duration > 7200) {
-            return new JsonResponse(['error' => 'Game session expired'], 400);
-        }
-
-        $user = $this->userService->findById((int) $userId);
-        if (!$user) {
-            return new JsonResponse(['error' => 'User not found'], 404);
-        }
-
-        $result = $this->scoreService->saveHighscoreForUser($user, $score);
-
-        $activeGames[$gameToken]['used'] = true;
-        $activeGames[$gameToken]['submitted_at'] = time();
-        $activeGames[$gameToken]['submitted_score'] = $score;
-        $session->set('active_game_tokens', $activeGames);
+        $result = $this->scoreService->saveHighscore($username, $score);
 
         return new JsonResponse($result);
     }
