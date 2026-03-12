@@ -20,7 +20,14 @@ class UserController
     #[Route('/register', name: 'user_register', methods: ['POST'])]
     public function register(Request $request): JsonResponse
     {
-        $data = TypeCast::toArray(json_decode($request->getContent(), true));
+        $decoded = json_decode($request->getContent(), true);
+
+        if (!is_array($decoded)) {
+            return new JsonResponse(['error' => 'Invalid JSON'], 400);
+        }
+
+        /** @var array<string, mixed> $data */
+        $data = $decoded;
 
         $username = trim(TypeCast::toString($data['username'] ?? ''));
         $password = TypeCast::toString($data['password'] ?? '');
@@ -57,7 +64,14 @@ class UserController
             return new JsonResponse(['error' => 'Too many requests'], 429);
         }
 
-        $data = TypeCast::toArray(json_decode($request->getContent(), true));
+        $decoded = json_decode($request->getContent(), true);
+
+        if (!is_array($decoded)) {
+            return new JsonResponse(['error' => 'Invalid JSON'], 400);
+        }
+
+        /** @var array<string, mixed> $data */
+        $data = $decoded;
 
         $username = trim(TypeCast::toString($data['username'] ?? ''));
         $password = TypeCast::toString($data['password'] ?? '');
