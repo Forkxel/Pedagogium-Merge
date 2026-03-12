@@ -235,9 +235,7 @@ export default function ReactUI() {
     window.location.reload();
   };
 
-  if (loading) {
-    return null;
-  }
+  if (loading) return null;
 
   if (!user) {
     return <LoginScreen onLogin={setUser} />;
